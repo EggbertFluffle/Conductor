@@ -2,9 +2,11 @@ Harrison, Po-Yeh and Parker \
 CS 536: Programming Language Design \
 Professor Cheng Zhang \
 
+= Condutor, a Window Management Language
+
 == What is a "window manager"
 
-Window management is something everyone is familiar with. Every desktop has one. Most are floating, some are tiling, other are scrolling, but what's often more difficult to see, is the distinction between _window management_ and the remaining requirements for the typical desktop stack. There are 5 main parts to any computer desktop:
+Window management is something everyone is familiar with. Every desktop has one. Most are floating, some are tiling, others are scrolling, but what's often more difficult to see, is the distinction between _window management_ and the remaining requirements for the typical desktop stack. There are 5 main parts to any computer desktop:
 
 1. *Kernel, OS and hardware* - Responsible for receiving and forwarding input events, and drawing to outputs.
 2. *Display server* - Coordinates dataflow between desktop clients and other systems, including the kernel and hardware.
@@ -18,16 +20,16 @@ The window manager itself plays only a part in the desktop experience, but throu
 
 There do exist projects that give the window management control to the user. Within X11, DWM and XMonad are two of these projects. DWM is written and configured in C by modifying the source code of the project directly. This is not approachable at all to the average user whatsoever, which is where XMonad comes in. It similarly is written and configured in the same language, that being Haskell. While it utilizes Haskell language features, such as typeclasses, making configuration easier, simple windowing patterns are still very long winded. Both of these wonderful projects unfortunately suffer from being too programmable to the point where they are daunting and unapproachable to prospective users.
 
-Wayland projects exist trying to accomplish similar goals. During its infancy, River was a Wayland compositor in the spirit of DWM, follwing the typical structure of Wayland compositors. In recent years however, Isaac Freund, the lead developer, has sought to completely banish the responsibility of window management from the project. Instead, River now implements a custom Wayland protocol used to interface with a properly external window manager, effectively making River a compositor and display server only. This protocol can be interfaced with in nearly limitless ways, but fails to escape the fact that simple windowing patterns now take even more technical complexity than they did on X11.
+Wayland projects exist trying to accomplish similar goals. During its infancy, River was a Wayland compositor in the spirit of DWM, following the typical structure of Wayland compositors. In recent years however, Isaac Freund, the lead developer, has sought to completely banish the responsibility of window management from the project. Instead, River now implements a custom Wayland protocol used to interface with a properly external window manager, effectively making River a compositor and display server only. This protocol can be interfaced with in nearly limitless ways, but fails to escape the fact that simple windowing patterns now take even more technical complexity than they did on X11.
 
 == Potential applications
 
 Though initially the scope of a DSL that describes how to place windows on a screen seems niche, there are two big advantages to the existine of a language like this. 
 
-First, existing window X11 window managers and Wayland compositors can be extended to support such a language. This would not only allow for existing window manager developer and users to simplify their configs, but also allow layouts to be shared across window manager, compositors and even between X11 and Wayland.
+First, existing X11 window managers and Wayland compositors can be extended to support such a language. This would not only allow for existing users to simplify their configs, but also allow layouts to be shared across X11 window managers and Wayland compositors.
 
 Second, and possible more important, is the oppourtunity for innovation. Scott Jenson from Canonical puts in well in his Ubuntu Summit talk #footnote[https://www.youtube.com/watch?v=1fZTOjd_bOQ], saying "desktop UX has not meaningfully changed in twenty years." (Jenson, 2:30) Now he does mention that more window managers is, in fact, _not_ the solution to this dead art, but the fact remains that approachability still helps. 
 
-One of Jenson's major points is that leading operating systems should be expected to test fly new ideas within desktop UX. Theres a few reasons for this, one of which is the barrier to entry. Not only could window managersinnovate in their own space, but if the barrier to entry for window managers is lower, more computer users and tinkeres can get their hands dirty with how new approaches to users manipulating data.
+One of Jenson's major points is that leading operating systems should be expected to test fly new ideas within desktop UX. Theres a few reasons for this, one of which is the barrier to entry. Not only could window managers innovate in their own space, but barrier to entry for window managers would drop. This in turnm allows more tikerers and computer users to get their hands dirty with new approaches to how we interact with our data.
 
-
+== Introducing Conductor
