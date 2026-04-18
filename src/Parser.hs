@@ -1,92 +1,195 @@
 {-# LANGUAGE OverloadedStrings #-}
-
 module Parser where
-
 import Data.Text (Text)
 import Text.Megaparsec (
-        Parsec,
-        oneOf,
-        (<|>),
-        MonadParsec (notFollowedBy, takeWhile1P), some)
-import Text.Megaparsec.Char (char, space1, newline, string, alphaNumChar)
+        Parsec, (<|>), 
+        MonadParsec (notFollowedBy, takeWhile1P),
+        some, optional, try, eof)
+import Text.Megaparsec.Char (char, hspace, newline, string, alphaNumChar, digitChar)
 import Data.Void (Void)
-import Data.Char (isAlpha)
-
+import Data.Char (isAlphaNum)
 type Input = Text
-
 type Parser a = Parsec Void Text a
 
+-- <conductor> ::= {<rule>}
 type Conductor = [Rule]
 
+-- <rule> ::= <variable> "=" <expr>
 data Rule = Rule Variable Expression
     deriving Show
 
+-- <variable> ::= <letter> [{<letter> | <digit>}]
 data Variable = Variable Text
     deriving Show
 
-data Expression = Expression Litteral Operator Litteral
+-- <expr> ::= <operand> <operator> [<opt>]<operand>
+--          | <opt><operand> <operator> <operand>
+--          | <operand>
+data Expression
+    = ExprBinary (Maybe Opt) Operand Operator (Maybe Opt) Operand
+    | ExprUnary Operand
     deriving Show
 
-data Operand = OperandParen Expression | OperandLit Litteral | OperandVar Variable
+-- <operand> ::= "(" <expr> ")" | <literal> | <variable>
+data Operand
+    = OperandParen Expression
+    | OperandLit Litteral
+    | OperandVar Variable
     deriving Show
 
+-- <literal> ::= "full" | "none"
 data Litteral = Full | None
     deriving Show
 
-data Operator = Split PartitionDirection
+-- <operator> ::= <split> | <divide> | <layer>
+data Operator
+    = Split PartitionDirection (Maybe Param)
+    | Divide PartitionDirection
+    | Layer LayerSpec
     deriving Show
 
+-- <part_dir> ::= "-" | "|"
 data PartitionDirection = Horizontal | Vertical
     deriving Show
 
+-- <layer_dir> ::= "<" | "^" | ">" | "v"
+data LayerDir = LayerLeft | LayerUp | LayerRight | LayerDown
+    deriving Show
+
+-- <layer> ::= "{" <layer_dir> "}" | "{" <param> "," <param> "}"
+data LayerSpec
+    = LayerDirection LayerDir
+    | LayerParams Param Param
+    deriving Show
+
+-- <param> ::= "param" | <float>
+data Param = ParamKeyword | ParamFloat Float
+    deriving Show
+
+-- <opt> ::= "?"
+data Opt = Opt
+    deriving Show
+
 parseConductor :: Parser Conductor
-parseConductor = some parseRule
+parseConductor = some parseRule <* eof
 
 parseRule :: Parser Rule
 parseRule = do
     variable <- parseVariable
-    space1
+    hspace
     _ <- char '='
-    space1
+    hspace
     expression <- parseExpression
-    _ <- newline
+    _ <- newline <|> (eof >> return '\n')
     return $ Rule variable expression
 
+-- hspace :: Parser ()
+-- hspace = do
+--     _ <- optional (takeWhile1P (Just "space") (\c -> c == ' ' || c == '\t'))
+--     return ()
+
 parseVariable :: Parser Variable
-parseVariable = do
-    t <- takeWhile1P (Just "variable") isAlpha 
-    return $ Variable t
+parseVariable = try $ do
+    t <- takeWhile1P (Just "variable") (\c -> isAlphaNum c || c == '_')
+    notFollowedBy alphaNumChar
+    case t of
+        "full"  -> fail "expected variable, got keyword 'full'"
+        "none"  -> fail "expected variable, got keyword 'none'"
+        "param" -> fail "expected variable, got keyword 'param'"
+        _       -> return $ Variable t
 
 parseOperand :: Parser Operand
-parseOperand = do
-    operand <- OperandParen <$> (char '(' *> parseExpression <* char ')')
-           <|> OperandLit <$> parseLitteral
-           <|> OperandVar <$> parseVariable
-    return operand
+parseOperand =
+      (OperandParen <$> (char '(' *> parseExpression <* char ')'))
+  <|> (OperandLit <$> parseLitteral)
+  <|> (OperandVar <$> parseVariable)
 
 parseExpression :: Parser Expression
 parseExpression = do
-    litteral1 <- parseLitteral
-    space1
-    operator <- parseOperator
-    space1
-    litteral2 <- parseLitteral
-    return $ Expression litteral1 operator litteral2
+    optLeft  <- optional parseOpt
+    operand1 <- parseOperand
+    case optLeft of
+        Just _ -> do
+            hspace
+            operator <- parseOperator
+            hspace
+            optRight <- optional parseOpt
+            operand2 <- parseOperand
+            return $ ExprBinary optLeft operand1 operator optRight operand2
+        Nothing -> do
+            rest <- optional $ try $ do
+                hspace
+                operator <- parseOperator
+                hspace
+                optRight <- optional parseOpt
+                operand2 <- parseOperand
+                return (operator, optRight, operand2)
+            return $ case rest of
+                Just (op, optRight, operand2) ->
+                    ExprBinary Nothing operand1 op optRight operand2
+                Nothing ->
+                    ExprUnary operand1
 
-keyword :: Text -> Parser Text
-keyword kw = string kw <* notFollowedBy alphaNumChar 
+parseOpt :: Parser Opt
+parseOpt = do
+    _ <- char '?'
+    return Opt
 
 parseLitteral :: Parser Litteral
 parseLitteral =
-      Full <$ (string "full" <* notFollowedBy alphaNumChar)
-  <|> None <$ (string "none" <* notFollowedBy alphaNumChar)
-  
+      Full <$ string "full" <* notFollowedBy alphaNumChar
+  <|> None <$ string "none" <* notFollowedBy alphaNumChar
+
 parseOperator :: Parser Operator
-parseOperator = do
-    p <- oneOf ['|', '-']
-    return $ Split (if p == '|' then Vertical else Horizontal)
+parseOperator =
+      parseSplit
+  <|> parseDivide
+  <|> parseLayer
 
 parseSplit :: Parser Operator
 parseSplit = do
-    p <- char '[' *> oneOf ['|', '-'] <* char ']'
-    return $ Split (if p == '|' then Vertical else Horizontal)
+    _ <- char '['
+    dir   <- parsePartDir
+    param <- optional (char ',' *> hspace *> parseParam)
+    _ <- char ']'
+    return $ Split dir param
+
+parseDivide :: Parser Operator
+parseDivide = try $ do
+    _ <- char '('
+    dir <- parsePartDir
+    _ <- char ')'
+    return $ Divide dir
+
+parseLayer :: Parser Operator
+parseLayer = do
+    _ <- char '{'
+    spec <- try (LayerDirection <$> parseLayerDir)
+        <|> (LayerParams <$> parseParam <*> (char ',' *> hspace *> parseParam))
+    _ <- char '}'
+    return $ Layer spec
+
+parsePartDir :: Parser PartitionDirection
+parsePartDir =
+      Horizontal <$ char '-'
+  <|> Vertical   <$ char '|'
+
+parseLayerDir :: Parser LayerDir
+parseLayerDir =
+      LayerLeft  <$ char '<'
+  <|> LayerUp    <$ char '^'
+  <|> LayerRight <$ char '>'
+  <|> LayerDown  <$ char 'v'
+
+parseParam :: Parser Param
+parseParam =
+      ParamKeyword <$ string "param" <* notFollowedBy alphaNumChar
+  <|> ParamFloat   <$> parseFloat
+
+parseFloat :: Parser Float
+parseFloat = do
+    whole <- some digitChar
+    frac  <- optional (char '.' *> some digitChar)
+    return $ read $ case frac of
+        Just f  -> whole ++ "." ++ f
+        Nothing -> whole
