@@ -1,0 +1,3 @@
+start = full [|] ?stack
+stack = full (-) ?stack
+stack = full (-) ?stack

@@ -1,5 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
+
 module Parser where
+
 import Data.Text (Text)
 import Text.Megaparsec (
         Parsec, (<|>), 
@@ -8,6 +11,10 @@ import Text.Megaparsec (
 import Text.Megaparsec.Char (char, hspace, newline, string, alphaNumChar, digitChar)
 import Data.Void (Void)
 import Data.Char (isAlphaNum)
+
+import Data.Aeson (ToJSON)
+import GHC.Generics (Generic)
+
 type Input = Text
 type Parser a = Parsec Void Text a
 
@@ -15,12 +22,12 @@ type Parser a = Parsec Void Text a
 type Conductor = [Rule]
 
 -- <rule> ::= <variable> "=" <expr>
-data Rule = Rule Variable Expression
-    deriving Show
+data Rule = Rule { name :: Variable, r_expression :: Expression }
+    deriving (Show, Generic)
 
 -- <variable> ::= <letter> [{<letter> | <digit>}]
 data Variable = Variable Text
-    deriving Show
+	deriving (Show, Generic)
 
 -- <expr> ::= <operand> <operator> [<opt>]<operand>
 --          | <opt><operand> <operator> <operand>
@@ -28,47 +35,59 @@ data Variable = Variable Text
 data Expression
     = ExprBinary (Maybe Opt) Operand Operator (Maybe Opt) Operand
     | ExprUnary Operand
-    deriving Show
+	deriving (Show, Generic)
 
 -- <operand> ::= "(" <expr> ")" | <literal> | <variable>
 data Operand
-    = OperandParen Expression
-    | OperandLit Litteral
-    | OperandVar Variable
-    deriving Show
+    = OperandParen { o_expression :: Expression }
+    | OperandLit { litteral :: Litteral }
+    | OperandVar { variable :: Variable }
+    deriving (Show, Generic)
 
 -- <literal> ::= "full" | "none"
 data Litteral = Full | None
-    deriving Show
+    deriving (Show, Generic)
 
 -- <operator> ::= <split> | <divide> | <layer>
 data Operator
-    = Split PartitionDirection (Maybe Param)
-    | Divide PartitionDirection
+    = Split { direction :: PartitionDirection, params :: (Maybe Param) }
+    | Divide { direction :: PartitionDirection }
     | Layer LayerSpec
-    deriving Show
+    deriving (Show, Generic)
 
 -- <part_dir> ::= "-" | "|"
 data PartitionDirection = Horizontal | Vertical
-    deriving Show
+    deriving (Show, Generic)
 
 -- <layer_dir> ::= "<" | "^" | ">" | "v"
 data LayerDir = LayerLeft | LayerUp | LayerRight | LayerDown
-    deriving Show
+    deriving (Show, Generic)
 
 -- <layer> ::= "{" <layer_dir> "}" | "{" <param> "," <param> "}"
 data LayerSpec
-    = LayerDirection LayerDir
-    | LayerParams Param Param
-    deriving Show
+    = LayerDirection { layer_direction :: LayerDir }
+    | LayerParams { x :: Param, y :: Param }
+    deriving (Show, Generic)
 
 -- <param> ::= "param" | <float>
 data Param = ParamKeyword | ParamFloat Float
-    deriving Show
+    deriving (Show, Generic)
 
 -- <opt> ::= "?"
 data Opt = Opt
-    deriving Show
+    deriving (Show, Generic)
+
+instance ToJSON Rule
+instance ToJSON Variable
+instance ToJSON Expression
+instance ToJSON Operand
+instance ToJSON Litteral
+instance ToJSON Operator
+instance ToJSON PartitionDirection
+instance ToJSON LayerDir
+instance ToJSON LayerSpec
+instance ToJSON Param
+instance ToJSON Opt
 
 parseConductor :: Parser Conductor
 parseConductor = some parseRule <* eof
@@ -79,9 +98,9 @@ parseRule = do
     hspace
     _ <- char '='
     hspace
-    expression <- parseExpression
+    expr <- parseExpression
     _ <- newline <|> (eof >> return '\n')
-    return $ Rule variable expression
+    return $ Rule variable expr
 
 -- hspace :: Parser ()
 -- hspace = do
