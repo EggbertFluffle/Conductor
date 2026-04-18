@@ -2,21 +2,14 @@
 
 module Parser where
 
-import Data.Text (Text, pack, unpack)
+import Data.Text (Text)
 import Text.Megaparsec (
         Parsec,
         oneOf,
         (<|>),
-        Tokens,
         MonadParsec (notFollowedBy, takeWhile1P), some)
-import Text.Megaparsec.Char (
-        char,
-        asciiChar,
-    space1,
-    newline,
-    string, alphaNumChar)
+import Text.Megaparsec.Char (char, space1, newline, string, alphaNumChar)
 import Data.Void (Void)
-import GHC.IO.Encoding.Latin1 (ascii)
 import Data.Char (isAlpha)
 
 type Input = Text
@@ -32,6 +25,9 @@ data Variable = Variable Text
     deriving Show
 
 data Expression = Expression Litteral Operator Litteral
+    deriving Show
+
+data Operand = OperandParen Expression | OperandLit Litteral | OperandVar Variable
     deriving Show
 
 data Litteral = Full | None
@@ -56,11 +52,17 @@ parseRule = do
     _ <- newline
     return $ Rule variable expression
 
--- Only 1 letter variable names for now
 parseVariable :: Parser Variable
 parseVariable = do
     t <- takeWhile1P (Just "variable") isAlpha 
     return $ Variable t
+
+parseOperand :: Parser Operand
+parseOperand = do
+    operand <- OperandParen <$> (char '(' *> parseExpression <* char ')')
+           <|> OperandLit <$> parseLitteral
+           <|> OperandVar <$> parseVariable
+    return operand
 
 parseExpression :: Parser Expression
 parseExpression = do
@@ -82,4 +84,9 @@ parseLitteral =
 parseOperator :: Parser Operator
 parseOperator = do
     p <- oneOf ['|', '-']
+    return $ Split (if p == '|' then Vertical else Horizontal)
+
+parseSplit :: Parser Operator
+parseSplit = do
+    p <- char '[' *> oneOf ['|', '-'] <* char ']'
     return $ Split (if p == '|' then Vertical else Horizontal)

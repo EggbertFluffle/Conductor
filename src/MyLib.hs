@@ -12,6 +12,6 @@ parseTest input = case parse parseRule "" input of
 main :: IO ()
 main = do
     putStrLn "Testing parser..."
-    parseTest $ pack "start = full | none\n"
-    parseTest $ pack "end = none - full\n"
-	-- parseTest $ pack "start = (full - full) | none\n"
+    parseTest $ pack "start = full [|] none\n"
+    parseTest $ pack "end = none [-] full\n"
+    parseTest $ pack "start = (full [|] full) - none\n"
