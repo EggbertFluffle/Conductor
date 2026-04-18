@@ -1,3 +1,2 @@
-start = full [|] ?stack
-stack = full (-) ?stack
-stack = full (-) ?stack
+S = full [|] V
+V = full [-] full

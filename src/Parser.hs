@@ -12,7 +12,7 @@ import Text.Megaparsec.Char (char, hspace, newline, string, alphaNumChar, digitC
 import Data.Void (Void)
 import Data.Char (isAlphaNum)
 
-import Data.Aeson (ToJSON)
+import Data.Aeson (ToJSON, toJSON, object, (.=))
 import GHC.Generics (Generic)
 
 type Input = Text
@@ -27,7 +27,7 @@ data Rule = Rule { name :: Variable, r_expression :: Expression }
 
 -- <variable> ::= <letter> [{<letter> | <digit>}]
 data Variable = Variable Text
-	deriving (Show, Generic)
+    deriving (Show, Generic)
 
 -- <expr> ::= <operand> <operator> [<opt>]<operand>
 --          | <opt><operand> <operator> <operand>
@@ -35,7 +35,7 @@ data Variable = Variable Text
 data Expression
     = ExprBinary (Maybe Opt) Operand Operator (Maybe Opt) Operand
     | ExprUnary Operand
-	deriving (Show, Generic)
+    deriving (Show, Generic)
 
 -- <operand> ::= "(" <expr> ")" | <literal> | <variable>
 data Operand
@@ -79,15 +79,69 @@ data Opt = Opt
 
 instance ToJSON Rule
 instance ToJSON Variable
-instance ToJSON Expression
-instance ToJSON Operand
-instance ToJSON Litteral
-instance ToJSON Operator
 instance ToJSON PartitionDirection
 instance ToJSON LayerDir
 instance ToJSON LayerSpec
-instance ToJSON Param
-instance ToJSON Opt
+
+instance ToJSON Param where
+    toJSON ParamKeyword = object ["param_type" .= ("runtime" :: Text)]
+    toJSON (ParamFloat f) = object ["param_type" .= ("float" :: Text), "value" .= f]
+
+instance ToJSON Opt where
+    toJSON Opt = toJSON ()
+
+instance ToJSON Expression where
+    toJSON (ExprBinary optL op oper optR right) = object
+        [ "expression_type" .= ("binary" :: Text)
+        , "optional" .= case (optL, optR) of
+            (Just _, Nothing) -> ("left" :: Text)
+            _ -> "right"
+        , "left_operand" .= op
+        , "operator" .= oper
+        , "right_operand" .= right
+        ]
+    toJSON (ExprUnary op) = object
+        [ "expression_type" .= ("unary" :: Text)
+        , "operand" .= op
+        ]
+
+instance ToJSON Operand where
+    toJSON (OperandParen e) = object
+        [ "operand_type" .= ("paren" :: Text)
+        , "expression" .= e
+        ]
+    toJSON (OperandLit l) = object
+        [ "operand_type" .= ("literal" :: Text)
+        , "value" .= (case l of
+            Full -> ("full" :: Text) 
+            None -> ("none" :: Text))
+        ]
+    toJSON (OperandVar v) = object
+        [ "operand_type" .= ("variable" :: Text)
+        , "name" .= v
+        ]
+
+instance ToJSON Operator where
+    toJSON (Split dir mParam) = object
+        [ "operator_type" .= ("split" :: Text)
+        , "direction" .= dir
+        , "params" .= case mParam of
+            Just p -> [toJSON p]
+            Nothing -> [toJSON $ ParamFloat 0.5]
+        ]
+    toJSON (Divide dir) = object
+        [ "operator_type" .= ("divide" :: Text)
+        , "direction" .= dir
+        ]
+    toJSON (Layer spec) = object
+        [ "operator_type" .= ("layer" :: Text)
+        , "spec" .= case spec of
+            LayerDirection LayerLeft  -> object ["x" .= (-1 :: Float), "y" .= (0  :: Float)]
+            LayerDirection LayerRight -> object ["x" .= (1  :: Float), "y" .= (0  :: Float)]
+            LayerDirection LayerUp    -> object ["x" .= (0  :: Float), "y" .= (-1 :: Float)]
+            LayerDirection LayerDown  -> object ["x" .= (0  :: Float), "y" .= (1  :: Float)]
+            LayerParams x y           -> object ["x" .= x,             "y" .= y            ]
+        ]
 
 parseConductor :: Parser Conductor
 parseConductor = some parseRule <* eof

@@ -1,4 +1,4 @@
-module Main (main, parseTest) where
+module MyLib (main, parseTest) where
 
 import Parser (parseConductor)
 import Data.Text (Text, pack)
