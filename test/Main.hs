@@ -5,7 +5,7 @@ module Main (main) where
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.Monad.Trans.Writer (runWriter)
 import qualified Data.Map.Strict as M
-import Data.Text (Text, pack)
+import Data.Text (Text)
 import Test.Tasty
 import Test.Tasty.HUnit
 import Text.Megaparsec (errorBundlePretty, parse)
@@ -55,7 +55,7 @@ v = Variable
 -- takes the entire screen (not the left half).
 layoutTest1 :: TestTree
 layoutTest1 = testCase "1: full [|] none" $ do
-    let cfg = mkConfig (pack "start = full [|] none\n") (v "start") screen 100
+    let cfg = mkConfig "start = full [|] none\n" (v "start") screen 100
         layout = compile cfg
 
     let (ps0, left0) = layout [] []
@@ -81,7 +81,7 @@ layoutTest1 = testCase "1: full [|] none" $ do
 -- Horizontal split: top=none (empty), bottom=full (one window).
 layoutTest2 :: TestTree
 layoutTest2 = testCase "2: none [-] full (start=end)" $ do
-    let cfg = mkConfig (pack "end = none [-] full\n") (v "end") screen 100
+    let cfg = mkConfig "end = none [-] full\n" (v "end") screen 100
         layout = compile cfg
 
     let (ps0, _) = layout [] []
@@ -106,7 +106,7 @@ layoutTest2 = testCase "2: none [-] full (start=end)" $ do
 -}
 layoutTest2UnknownStart :: TestTree
 layoutTest2UnknownStart = testCase "2a: unknown start variable" $ do
-    let cfg = mkConfig (pack "end = none [-] full\n") (v "start") screen 100
+    let cfg = mkConfig "end = none [-] full\n" (v "start") screen 100
         (mLayout, logs) = compileConfig cfg
     assertBool "returns Nothing" (case mLayout of Nothing -> True; Just _ -> False)
     assertEqual "logs exactly one message" 1 (length logs)
@@ -116,7 +116,7 @@ layoutTest2UnknownStart = testCase "2a: unknown start variable" $ do
 -- `full [|] full` does a normal vertical split for 2 windows.
 layoutTest3 :: TestTree
 layoutTest3 = testCase "3: (full [|] full) [-] none" $ do
-    let cfg = mkConfig (pack "start = (full [|] full) [-] none\n") (v "start") screen 100
+    let cfg = mkConfig "start = (full [|] full) [-] none\n" (v "start") screen 100
         layout = compile cfg
 
     let (ps0, _) = layout [] []
@@ -149,9 +149,8 @@ layoutTest3 = testCase "3: (full [|] full) [-] none" $ do
 layoutTest4 :: TestTree
 layoutTest4 = testCase "4: master/stack recursion" $ do
     let src =
-            pack
-                "start = full [|] ?stack\n\
-                \stack = full (-) ?stack\n"
+            "start = full [|] ?stack\n\
+            \stack = full (-) ?stack\n"
         cfg = mkConfig src (v "start") screen 100
         layout = compile cfg
 

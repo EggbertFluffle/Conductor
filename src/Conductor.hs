@@ -11,7 +11,7 @@ module Conductor (
     WindowTransform,
 ) where
 
-import Conductor.Parser hiding (params, x, y)
+import Conductor.Parser
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader
 import Control.Monad.Trans.Writer

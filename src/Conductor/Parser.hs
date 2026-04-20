@@ -1,7 +1,21 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Conductor.Parser where
+module Conductor.Parser (
+    parseConductor,
+    Conductor,
+    Rule (..),
+    Variable (..),
+    Expression (..),
+    Operand (..),
+    Litteral (..),
+    Operator (..),
+    PartitionDirection (..),
+    LayerDir (..),
+    LayerSpec (..),
+    Param (..),
+    Opt (Opt),
+) where
 
 import Data.Char (isAlphaNum)
 import Data.Text (Text)
@@ -21,7 +35,7 @@ import Data.Aeson (ToJSON, object, toJSON, (.=))
 import GHC.Generics (Generic)
 
 type Input = Text
-type Parser a = Parsec Void Text a
+type Parser a = Parsec Void Input a
 
 -- <conductor> ::= {<rule>}
 type Conductor = [Rule]
@@ -55,8 +69,8 @@ data Litteral = Full | None
 
 -- <operator> ::= <split> | <divide> | <layer>
 data Operator
-    = Split {direction :: PartitionDirection, params :: Maybe Param}
-    | Divide {direction :: PartitionDirection}
+    = Split {sDirection :: PartitionDirection, sParams :: Maybe Param}
+    | Divide {dDirection :: PartitionDirection}
     | Layer LayerSpec
     deriving (Show, Generic)
 
@@ -70,8 +84,8 @@ data LayerDir = LayerLeft | LayerUp | LayerRight | LayerDown
 
 -- <layer> ::= "{" <layer_dir> "}" | "{" <param> "," <param> "}"
 data LayerSpec
-    = LayerDirection {layer_direction :: LayerDir}
-    | LayerParams {x :: Param, y :: Param}
+    = LayerDirection {layerDirection :: LayerDir}
+    | LayerParams {layX :: Param, layY :: Param}
     deriving (Show, Generic)
 
 -- <param> ::= "param" | <float>
