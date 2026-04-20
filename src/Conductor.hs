@@ -28,14 +28,6 @@ runTests = do
     parseTest $ pack "start = (full [|] full) [-] none\n"
     parseTest $ pack "start = full [|] ?stack\nstack = full (-) ?stack"
 
--- winow types
--- poniter coordinate
-data PointerCoordinate = PointerCoordinate
-    { pcX :: Double
-    , pcY :: Double
-    }
-    deriving (Show, Eq)
-
 -- screen size pixel
 data ScreenDimension = ScreenDimension
     { sdWidth :: Int
@@ -43,20 +35,17 @@ data ScreenDimension = ScreenDimension
     }
     deriving (Show, Eq)
 
--- window handle
-newtype WindowSpec = WindowSpec {windowId :: Int}
-    deriving (Show, Eq, Ord)
+type WindowId = Int
 
 -- window mapping
-data WindowMapping = WindowMapping
-    { wmWindow :: WindowSpec
-    , wmX :: Int
-    , wmY :: Int
-    , wmWidth :: Int
-    , wmHeight :: Int
+data WindowTransform = WindowTransform
+    { wtX :: Int
+    , wtY :: Int
+    , wtWidth :: Int
+    , wtHeight :: Int
     }
     deriving (Show, Eq)
 
 -- XMonad layout call type shi call laypit func
 type WindowLayoutFunc =
-    (PointerCoordinate, ScreenDimension, [WindowSpec]) -> [WindowMapping]
+    (ScreenDimension, [WindowId]) -> [(WindowId, WindowTransform)]
