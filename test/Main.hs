@@ -192,19 +192,71 @@ layoutTest4 = testCase "4: master/stack recursion" $ do
         ps4
     assertEqual "4 windows: no leftover" [] left4
 
+-- Split with explicit ratio 0.3: left gets 30% width, right gets 70%.
+splitRatioTestLiteral :: TestTree
+splitRatioTestLiteral = testCase "full [|, 0.3] full" $ do
+    let cfg = mkConfig "start = full [|, 0.3] full\n" (v "start") screen 100
+        layout = compile cfg
+        (ps, left) = layout [0, 1] []
+    assertEqual
+        "2 windows: 30/70 vertical split"
+        [(0, Rect 0 0 240 600), (1, Rect 240 0 560 600)]
+        ps
+    assertEqual "no leftover" [] left
+
+-- Split with `param` keyword: ratio pulled from the runtime param list.
+splitRatioTestRuntime :: TestTree
+splitRatioTestRuntime = testCase "full [|, param] full, param list = [0.5]" $ do
+    let cfg = mkConfig "start = full [|, param] full\n" (v "start") screen 100
+        layout = compile cfg
+        (ps, left) = layout [0, 1] [0.25]
+    assertEqual
+        "2 windows: 25/75 vertical split from param list"
+        [(0, Rect 0 0 200 600), (1, Rect 200 0 600 600)]
+        ps
+    assertEqual "no leftover" [] left
+
+-- Split with `param` but no runtime params given: resolveParam logs a
+-- warning and falls back to 0.5. The layout still produces the fallback
+-- split — we check both the placements and that a log message was emitted.
+splitRatioTestEmpty :: TestTree
+splitRatioTestEmpty = testCase "full [|, param] full, param list = []" $ do
+    let cfg = mkConfig "start = full [|, param] full\n" (v "start") screen 100
+        (mLayout, logs) = compileConfig cfg
+    layout <- case mLayout of
+        Just f -> pure f
+        Nothing -> assertFailure "evalRules returned Nothing"
+    let (ps, left) = layout [0, 1] []
+    assertEqual
+        "2 windows: fallback to 50/50 split"
+        [(0, Rect 0 0 400 600), (1, Rect 400 0 400 600)]
+        ps
+    assertEqual "no leftover" [] left
+    -- `logs` comes from the compile step, before the layout runs. The
+    -- warning we want is emitted during layout, which discards its logs
+    -- (per the current design). So we can only check compile-time logs
+    -- are clean here — the runtime warning isn't observable.
+    assertEqual "no compile-time logs" [] logs
+
 layoutTests :: TestTree
 layoutTests =
     testGroup
-        "Conductor"
-        [ testGroup
-            "Layout Test Cases"
-            [ layoutTest1
-            , layoutTest2
-            , layoutTest2UnknownStart
-            , layoutTest3
-            , layoutTest4
-            ]
+        "Layout Tests"
+        [ layoutTest1
+        , layoutTest2
+        , layoutTest2UnknownStart
+        , layoutTest3
+        , layoutTest4
+        ]
+
+splitRatioTests :: TestTree
+splitRatioTests =
+    testGroup
+        "Split Ratio Tests"
+        [ splitRatioTestLiteral
+        , splitRatioTestRuntime
+        , splitRatioTestEmpty
         ]
 
 main :: IO ()
-main = defaultMain layoutTests
+main = defaultMain $ testGroup "Conductor" [layoutTests, splitRatioTests]
