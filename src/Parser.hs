@@ -1,18 +1,23 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Parser where
 
-import Data.Text (Text)
-import Text.Megaparsec (
-        Parsec, (<|>), 
-        MonadParsec (notFollowedBy, takeWhile1P),
-        some, optional, try, eof)
-import Text.Megaparsec.Char (char, hspace, newline, string, alphaNumChar, digitChar)
-import Data.Void (Void)
 import Data.Char (isAlphaNum)
+import Data.Text (Text)
+import Data.Void (Void)
+import Text.Megaparsec (
+    MonadParsec (notFollowedBy, takeWhile1P),
+    Parsec,
+    eof,
+    optional,
+    some,
+    try,
+    (<|>),
+ )
+import Text.Megaparsec.Char (alphaNumChar, char, digitChar, hspace, newline, string)
 
-import Data.Aeson (ToJSON, toJSON, object, (.=))
+import Data.Aeson (ToJSON, object, toJSON, (.=))
 import GHC.Generics (Generic)
 
 type Input = Text
@@ -22,11 +27,11 @@ type Parser a = Parsec Void Text a
 type Conductor = [Rule]
 
 -- <rule> ::= <variable> "=" <expr>
-data Rule = Rule { name :: Variable, r_expression :: Expression }
+data Rule = Rule {name :: Variable, r_expression :: Expression}
     deriving (Show, Generic)
 
 -- <variable> ::= <letter> [{<letter> | <digit>}]
-data Variable = Variable Text
+newtype Variable = Variable Text
     deriving (Show, Generic)
 
 -- <expr> ::= <operand> <operator> [<opt>]<operand>
@@ -39,9 +44,9 @@ data Expression
 
 -- <operand> ::= "(" <expr> ")" | <literal> | <variable>
 data Operand
-    = OperandParen { o_expression :: Expression }
-    | OperandLit { litteral :: Litteral }
-    | OperandVar { variable :: Variable }
+    = OperandParen {o_expression :: Expression}
+    | OperandLit {litteral :: Litteral}
+    | OperandVar {variable :: Variable}
     deriving (Show, Generic)
 
 -- <literal> ::= "full" | "none"
@@ -50,8 +55,8 @@ data Litteral = Full | None
 
 -- <operator> ::= <split> | <divide> | <layer>
 data Operator
-    = Split { direction :: PartitionDirection, params :: (Maybe Param) }
-    | Divide { direction :: PartitionDirection }
+    = Split {direction :: PartitionDirection, params :: Maybe Param}
+    | Divide {direction :: PartitionDirection}
     | Layer LayerSpec
     deriving (Show, Generic)
 
@@ -65,8 +70,8 @@ data LayerDir = LayerLeft | LayerUp | LayerRight | LayerDown
 
 -- <layer> ::= "{" <layer_dir> "}" | "{" <param> "," <param> "}"
 data LayerSpec
-    = LayerDirection { layer_direction :: LayerDir }
-    | LayerParams { x :: Param, y :: Param }
+    = LayerDirection {layer_direction :: LayerDir}
+    | LayerParams {x :: Param, y :: Param}
     deriving (Show, Generic)
 
 -- <param> ::= "param" | <float>
@@ -91,104 +96,107 @@ instance ToJSON Opt where
     toJSON Opt = toJSON ()
 
 instance ToJSON Expression where
-    toJSON (ExprBinary optL op oper optR right) = object
-        [ "expression_type" .= ("binary" :: Text)
-        , "optional" .= case (optL, optR) of
-            (Just _, Nothing) -> ("left" :: Text)
-            _ -> "right"
-        , "left_operand" .= op
-        , "operator" .= oper
-        , "right_operand" .= right
-        ]
-    toJSON (ExprUnary op) = object
-        [ "expression_type" .= ("unary" :: Text)
-        , "operand" .= op
-        ]
+    toJSON (ExprBinary optL op oper optR right) =
+        object
+            [ "expression_type" .= ("binary" :: Text)
+            , "optional" .= case (optL, optR) of
+                (Just _, Nothing) -> ("left" :: Text)
+                _ -> "right"
+            , "left_operand" .= op
+            , "operator" .= oper
+            , "right_operand" .= right
+            ]
+    toJSON (ExprUnary op) =
+        object
+            [ "expression_type" .= ("unary" :: Text)
+            , "operand" .= op
+            ]
 
 instance ToJSON Operand where
-    toJSON (OperandParen e) = object
-        [ "operand_type" .= ("paren" :: Text)
-        , "expression" .= e
-        ]
-    toJSON (OperandLit l) = object
-        [ "operand_type" .= ("literal" :: Text)
-        , "value" .= (case l of
-            Full -> ("full" :: Text) 
-            None -> ("none" :: Text))
-        ]
-    toJSON (OperandVar v) = object
-        [ "operand_type" .= ("variable" :: Text)
-        , "name" .= v
-        ]
+    toJSON (OperandParen e) =
+        object
+            [ "operand_type" .= ("paren" :: Text)
+            , "expression" .= e
+            ]
+    toJSON (OperandLit l) =
+        object
+            [ "operand_type" .= ("literal" :: Text)
+            , "value"
+                .= ( case l of
+                        Full -> ("full" :: Text)
+                        None -> ("none" :: Text)
+                   )
+            ]
+    toJSON (OperandVar v) =
+        object
+            [ "operand_type" .= ("variable" :: Text)
+            , "name" .= v
+            ]
 
 instance ToJSON Operator where
-    toJSON (Split dir mParam) = object
-        [ "operator_type" .= ("split" :: Text)
-        , "direction" .= dir
-        , "params" .= case mParam of
-            Just p -> [toJSON p]
-            Nothing -> [toJSON $ ParamFloat 0.5]
-        ]
-    toJSON (Divide dir) = object
-        [ "operator_type" .= ("divide" :: Text)
-        , "direction" .= dir
-        ]
-    toJSON (Layer spec) = object
-        [ "operator_type" .= ("layer" :: Text)
-        , "spec" .= case spec of
-            LayerDirection LayerLeft  -> object ["x" .= (-1 :: Float), "y" .= (0  :: Float)]
-            LayerDirection LayerRight -> object ["x" .= (1  :: Float), "y" .= (0  :: Float)]
-            LayerDirection LayerUp    -> object ["x" .= (0  :: Float), "y" .= (-1 :: Float)]
-            LayerDirection LayerDown  -> object ["x" .= (0  :: Float), "y" .= (1  :: Float)]
-            LayerParams x y           -> object ["x" .= x,             "y" .= y            ]
-        ]
+    toJSON (Split dir mParam) =
+        object
+            [ "operator_type" .= ("split" :: Text)
+            , "direction" .= dir
+            , "params" .= case mParam of
+                Just p -> [toJSON p]
+                Nothing -> [toJSON $ ParamFloat 0.5]
+            ]
+    toJSON (Divide dir) =
+        object
+            [ "operator_type" .= ("divide" :: Text)
+            , "direction" .= dir
+            ]
+    toJSON (Layer spec) =
+        object
+            [ "operator_type" .= ("layer" :: Text)
+            , "spec" .= case spec of
+                LayerDirection LayerLeft -> object ["x" .= (-1 :: Float), "y" .= (0 :: Float)]
+                LayerDirection LayerRight -> object ["x" .= (1 :: Float), "y" .= (0 :: Float)]
+                LayerDirection LayerUp -> object ["x" .= (0 :: Float), "y" .= (-1 :: Float)]
+                LayerDirection LayerDown -> object ["x" .= (0 :: Float), "y" .= (1 :: Float)]
+                LayerParams x' y' -> object ["x" .= x', "y" .= y']
+            ]
 
 parseConductor :: Parser Conductor
 parseConductor = some parseRule <* eof
 
 parseRule :: Parser Rule
 parseRule = do
-    variable <- parseVariable
+    var <- parseVariable
     hspace
     _ <- char '='
     hspace
     expr <- parseExpression
     _ <- newline <|> (eof >> return '\n')
-    return $ Rule variable expr
-
--- hspace :: Parser ()
--- hspace = do
---     _ <- optional (takeWhile1P (Just "space") (\c -> c == ' ' || c == '\t'))
---     return ()
+    return $ Rule var expr
 
 parseVariable :: Parser Variable
 parseVariable = try $ do
     t <- takeWhile1P (Just "variable") (\c -> isAlphaNum c || c == '_')
     notFollowedBy alphaNumChar
     case t of
-        "full"  -> fail "expected variable, got keyword 'full'"
-        "none"  -> fail "expected variable, got keyword 'none'"
+        "full" -> fail "expected variable, got keyword 'full'"
+        "none" -> fail "expected variable, got keyword 'none'"
         "param" -> fail "expected variable, got keyword 'param'"
-        _       -> return $ Variable t
+        _ -> return $ Variable t
 
 parseOperand :: Parser Operand
 parseOperand =
-      (OperandParen <$> (char '(' *> parseExpression <* char ')'))
-  <|> (OperandLit <$> parseLitteral)
-  <|> (OperandVar <$> parseVariable)
+    (OperandParen <$> (char '(' *> parseExpression <* char ')'))
+        <|> (OperandLit <$> parseLitteral)
+        <|> (OperandVar <$> parseVariable)
 
 parseExpression :: Parser Expression
 parseExpression = do
-    optLeft  <- optional parseOpt
+    optLeft <- optional parseOpt
     operand1 <- parseOperand
     case optLeft of
-        Just _ -> do
-            hspace
-            operator <- parseOperator
-            hspace
-            optRight <- optional parseOpt
-            operand2 <- parseOperand
-            return $ ExprBinary optLeft operand1 operator optRight operand2
+        Just _ ->
+            ExprBinary optLeft operand1
+                <$> (hspace *> parseOperator)
+                <*> (hspace *> optional parseOpt)
+                <*> parseOperand
         Nothing -> do
             rest <- optional $ try $ do
                 hspace
@@ -204,65 +212,65 @@ parseExpression = do
                     ExprUnary operand1
 
 parseOpt :: Parser Opt
-parseOpt = do
-    _ <- char '?'
-    return Opt
+parseOpt = Opt <$ char '?'
 
 parseLitteral :: Parser Litteral
 parseLitteral =
-      Full <$ string "full" <* notFollowedBy alphaNumChar
-  <|> None <$ string "none" <* notFollowedBy alphaNumChar
+    Full
+        <$ string "full"
+        <* notFollowedBy alphaNumChar
+            <|> None
+        <$ string "none"
+        <* notFollowedBy alphaNumChar
 
 parseOperator :: Parser Operator
-parseOperator =
-      parseSplit
-  <|> parseDivide
-  <|> parseLayer
+parseOperator = parseSplit <|> parseDivide <|> parseLayer
 
 parseSplit :: Parser Operator
-parseSplit = do
-    _ <- char '['
-    dir   <- parsePartDir
-    param <- optional (char ',' *> hspace *> parseParam)
-    _ <- char ']'
-    return $ Split dir param
+parseSplit = Split <$> (char '[' *> parsePartDir) <*> (optional (char ',' *> hspace *> parseParam) <* char ']')
 
 parseDivide :: Parser Operator
-parseDivide = try $ do
-    _ <- char '('
-    dir <- parsePartDir
-    _ <- char ')'
-    return $ Divide dir
+parseDivide = try $ Divide <$> (char '(' *> parsePartDir <* char ')')
 
 parseLayer :: Parser Operator
 parseLayer = do
     _ <- char '{'
-    spec <- try (LayerDirection <$> parseLayerDir)
-        <|> (LayerParams <$> parseParam <*> (char ',' *> hspace *> parseParam))
+    spec <-
+        try (LayerDirection <$> parseLayerDir)
+            <|> (LayerParams <$> parseParam <*> (char ',' *> hspace *> parseParam))
     _ <- char '}'
     return $ Layer spec
 
 parsePartDir :: Parser PartitionDirection
 parsePartDir =
-      Horizontal <$ char '-'
-  <|> Vertical   <$ char '|'
+    Horizontal
+        <$ char '-'
+            <|> Vertical
+        <$ char '|'
 
 parseLayerDir :: Parser LayerDir
 parseLayerDir =
-      LayerLeft  <$ char '<'
-  <|> LayerUp    <$ char '^'
-  <|> LayerRight <$ char '>'
-  <|> LayerDown  <$ char 'v'
+    LayerLeft
+        <$ char '<'
+            <|> LayerUp
+        <$ char '^'
+            <|> LayerRight
+        <$ char '>'
+            <|> LayerDown
+        <$ char 'v'
 
 parseParam :: Parser Param
 parseParam =
-      ParamKeyword <$ string "param" <* notFollowedBy alphaNumChar
-  <|> ParamFloat   <$> parseFloat
+    ParamKeyword
+        <$ string "param"
+        <* notFollowedBy alphaNumChar
+            <|> ParamFloat
+        <$> parseFloat
 
 parseFloat :: Parser Float
 parseFloat = do
     whole <- some digitChar
-    frac  <- optional (char '.' *> some digitChar)
+    frac <- optional (char '.' *> some digitChar)
     return $ read $ case frac of
-        Just f  -> whole ++ "." ++ f
+        Just f -> whole ++ "." ++ f
         Nothing -> whole
