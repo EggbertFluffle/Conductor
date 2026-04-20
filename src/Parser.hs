@@ -32,7 +32,7 @@ data Rule = Rule {name :: Variable, r_expression :: Expression}
 
 -- <variable> ::= <letter> [{<letter> | <digit>}]
 newtype Variable = Variable Text
-    deriving (Show, Generic)
+    deriving (Show, Eq, Ord, Generic)
 
 -- <expr> ::= <operand> <operator> [<opt>]<operand>
 --          | <opt><operand> <operator> <operand>
