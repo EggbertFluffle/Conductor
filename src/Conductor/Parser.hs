@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Parser where
+module Conductor.Parser where
 
 import Data.Char (isAlphaNum)
 import Data.Text (Text)

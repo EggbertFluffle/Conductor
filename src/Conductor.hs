@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Conductor (
     parseTest,
     runTests,
@@ -9,6 +11,7 @@ module Conductor (
     WindowTransform,
 ) where
 
+import Conductor.Parser hiding (params, x, y)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader
 import Control.Monad.Trans.Writer
@@ -16,8 +19,7 @@ import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy.Char8 as BL
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
-import Data.Text (Text, pack)
-import Parser hiding (params, x, y)
+import Data.Text (Text)
 import Text.Megaparsec (errorBundlePretty, parse)
 
 parseTest :: Text -> IO ()
@@ -28,10 +30,10 @@ parseTest input = case parse parseConductor "" input of
 runTests :: IO ()
 runTests = do
     putStrLn "Testing parser..."
-    parseTest $ pack "start = full [|] none\n"
-    parseTest $ pack "end = none [-] full\n"
-    parseTest $ pack "start = (full [|] full) [-] none\n"
-    parseTest $ pack "start = full [|] ?stack\nstack = full (-) ?stack"
+    parseTest "start = full [|] none\n"
+    parseTest "end = none [-] full\n"
+    parseTest "start = (full [|] full) [-] none\n"
+    parseTest "start = full [|] ?stack\nstack = full (-) ?stack"
 
 data ScreenDimension = ScreenDimension
     { sdWidth :: Int

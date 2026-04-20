@@ -14,8 +14,8 @@ common warnings
 
 library
     import:           warnings
-    exposed-modules:  Conductor
-    other-modules:    Parser
+    exposed-modules:  Conductor, Conductor.Parser
+    other-modules:
     build-depends:    base ^>=4.18.3.0,
                       containers,
                       aeson,
@@ -46,4 +46,11 @@ test-suite conductor-test
     main-is:          Main.hs
     build-depends:
         base ^>=4.18.3.0,
-        conductor
+        containers,
+        conductor,
+        tasty,
+        tasty-hunit,
+        text,
+        transformers,
+        megaparsec,
+        HUnit
