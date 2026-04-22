@@ -17,6 +17,8 @@ module Conductor.Parser (
     Opt (Opt),
 ) where
 
+import Data.Aeson (FromJSON, ToJSON)
+
 import Data.Char (isAlphaNum)
 import Data.Text (Text)
 import Data.Void (Void)
@@ -28,10 +30,9 @@ import Text.Megaparsec (
     some,
     try,
     (<|>),
- )
+  )
 import Text.Megaparsec.Char (alphaNumChar, char, digitChar, hspace, newline, string)
 
-import Data.Aeson (ToJSON, object, toJSON, (.=))
 import GHC.Generics (Generic)
 
 type Input = Text
@@ -44,9 +45,15 @@ type Conductor = [Rule]
 data Rule = Rule {name :: Variable, r_expression :: Expression}
     deriving (Show, Generic)
 
+instance FromJSON Rule
+instance ToJSON Rule
+
 -- <variable> ::= <letter> [{<letter> | <digit>}]
 newtype Variable = Variable Text
     deriving (Show, Eq, Ord, Generic)
+
+instance FromJSON Variable
+instance ToJSON Variable
 
 -- <expr> ::= <operand> <operator> [<opt>]<operand>
 --          | <opt><operand> <operator> <operand>
@@ -56,6 +63,9 @@ data Expression
     | ExprUnary Operand
     deriving (Show, Generic)
 
+instance FromJSON Expression
+instance ToJSON Expression
+
 -- <operand> ::= "(" <expr> ")" | <literal> | <variable>
 data Operand
     = OperandParen {o_expression :: Expression}
@@ -63,9 +73,15 @@ data Operand
     | OperandVar {variable :: Variable}
     deriving (Show, Generic)
 
+instance FromJSON Operand
+instance ToJSON Operand
+
 -- <literal> ::= "full" | "none"
 data Litteral = Full | None
     deriving (Show, Generic)
+
+instance FromJSON Litteral
+instance ToJSON Litteral
 
 -- <operator> ::= <split> | <divide> | <layer>
 data Operator
@@ -74,13 +90,22 @@ data Operator
     | Layer LayerSpec
     deriving (Show, Generic)
 
+instance FromJSON Operator
+instance ToJSON Operator
+
 -- <part_dir> ::= "-" | "|"
 data PartitionDirection = Horizontal | Vertical
     deriving (Show, Generic)
 
+instance FromJSON PartitionDirection
+instance ToJSON PartitionDirection
+
 -- <layer_dir> ::= "<" | "^" | ">" | "v"
 data LayerDir = LayerLeft | LayerUp | LayerRight | LayerDown
     deriving (Show, Generic)
+
+instance FromJSON LayerDir
+instance ToJSON LayerDir
 
 -- <layer> ::= "{" <layer_dir> "}" | "{" <param> "," <param> "}"
 data LayerSpec
@@ -88,89 +113,22 @@ data LayerSpec
     | LayerParams {layX :: Param, layY :: Param}
     deriving (Show, Generic)
 
+instance FromJSON LayerSpec
+instance ToJSON LayerSpec
+
 -- <param> ::= "param" | <float>
 data Param = ParamKeyword | ParamFloat Float
     deriving (Show, Generic)
+
+instance FromJSON Param
+instance ToJSON Param
 
 -- <opt> ::= "?"
 data Opt = Opt
     deriving (Show, Generic)
 
-instance ToJSON Rule
-instance ToJSON Variable
-instance ToJSON PartitionDirection
-instance ToJSON LayerDir
-instance ToJSON LayerSpec
-
-instance ToJSON Param where
-    toJSON ParamKeyword = object ["param_type" .= ("runtime" :: Text)]
-    toJSON (ParamFloat f) = object ["param_type" .= ("float" :: Text), "value" .= f]
-
-instance ToJSON Opt where
-    toJSON Opt = toJSON ()
-
-instance ToJSON Expression where
-    toJSON (ExprBinary optL op oper optR right) =
-        object
-            [ "expression_type" .= ("binary" :: Text)
-            , "optional" .= case (optL, optR) of
-                (Just _, Nothing) -> ("left" :: Text)
-                _ -> "right"
-            , "left_operand" .= op
-            , "operator" .= oper
-            , "right_operand" .= right
-            ]
-    toJSON (ExprUnary op) =
-        object
-            [ "expression_type" .= ("unary" :: Text)
-            , "operand" .= op
-            ]
-
-instance ToJSON Operand where
-    toJSON (OperandParen e) =
-        object
-            [ "operand_type" .= ("paren" :: Text)
-            , "expression" .= e
-            ]
-    toJSON (OperandLit l) =
-        object
-            [ "operand_type" .= ("literal" :: Text)
-            , "value"
-                .= ( case l of
-                        Full -> ("full" :: Text)
-                        None -> ("none" :: Text)
-                   )
-            ]
-    toJSON (OperandVar v) =
-        object
-            [ "operand_type" .= ("variable" :: Text)
-            , "name" .= v
-            ]
-
-instance ToJSON Operator where
-    toJSON (Split dir mParam) =
-        object
-            [ "operator_type" .= ("split" :: Text)
-            , "direction" .= dir
-            , "params" .= case mParam of
-                Just p -> [toJSON p]
-                Nothing -> [toJSON $ ParamFloat 0.5]
-            ]
-    toJSON (Divide dir) =
-        object
-            [ "operator_type" .= ("divide" :: Text)
-            , "direction" .= dir
-            ]
-    toJSON (Layer spec) =
-        object
-            [ "operator_type" .= ("layer" :: Text)
-            , "spec" .= case spec of
-                LayerDirection LayerLeft -> object ["x" .= (-1 :: Float), "y" .= (0 :: Float)]
-                LayerDirection LayerRight -> object ["x" .= (1 :: Float), "y" .= (0 :: Float)]
-                LayerDirection LayerUp -> object ["x" .= (0 :: Float), "y" .= (-1 :: Float)]
-                LayerDirection LayerDown -> object ["x" .= (0 :: Float), "y" .= (1 :: Float)]
-                LayerParams x' y' -> object ["x" .= x', "y" .= y']
-            ]
+instance FromJSON Opt
+instance ToJSON Opt
 
 parseConductor :: Parser Conductor
 parseConductor = some parseRule <* eof
@@ -182,8 +140,14 @@ parseRule = do
     _ <- char '='
     hspace
     expr <- parseExpression
-    _ <- newline <|> (eof >> return '\n')
+    _ <- (semicolonEnd <|> newlineEnd)
     return $ Rule var expr
+  where
+    semicolonEnd = do
+        _ <- char ';'
+        hspace
+        newline <|> (eof >> return '\n')
+    newlineEnd = newline <|> (eof >> return '\n')
 
 parseVariable :: Parser Variable
 parseVariable = try $ do

@@ -1,55 +1,47 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Conductor (
-    parseTest,
-    runTests,
     evalRules,
+    runEvalRules,
     Config (..),
     Rect (..),
     ScreenDimension (..),
     WindowLayoutFunc,
     WindowTransform,
+    WindowId,
+    Placements,
 ) where
 
 import Conductor.Parser
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader
 import Control.Monad.Trans.Writer
-import Data.Aeson (encode)
+import Data.Aeson (FromJSON(parseJSON), ToJSON(toJSON), encode, (.:), (.=), (.:?), (.!=), object, withObject)
 import qualified Data.ByteString.Lazy.Char8 as BL
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Text (Text)
+import GHC.Generics (Generic)
 import Text.Megaparsec (errorBundlePretty, parse)
 
-parseTest :: Text -> IO ()
-parseTest input = case parse parseConductor "" input of
-    Left err -> putStrLn $ "Error: " ++ errorBundlePretty err
-    Right result -> BL.putStrLn (encode result)
-
-runTests :: IO ()
-runTests = do
-    putStrLn "Testing parser..."
-    parseTest "start = full [|] none\n"
-    parseTest "end = none [-] full\n"
-    parseTest "start = (full [|] full) [-] none\n"
-    parseTest "start = full [|] ?stack\nstack = full (-) ?stack"
+type WindowId = Int
 
 data ScreenDimension = ScreenDimension
     { sdWidth :: Int
-    , sdHeight :: Int
-    }
-    deriving (Show, Eq)
+    , sdHeight :: Int } deriving (Show, Eq, Generic)
 
-type WindowId = Int
+instance FromJSON ScreenDimension
+instance ToJSON ScreenDimension
 
 data Rect = Rect
     { rX :: Int
     , rY :: Int
     , rW :: Int
-    , rH :: Int
-    }
-    deriving (Show, Eq)
+    , rH :: Int } deriving (Show, Eq, Generic)
+
+instance FromJSON Rect
+instance ToJSON Rect
 
 type WindowTransform = Rect
 
@@ -63,7 +55,28 @@ data Config = Config
     , cScreenDimension :: ScreenDimension
     , cMaxDepth :: Int
     }
-    deriving (Show)
+    deriving (Show, Generic)
+
+instance ToJSON Config where
+    toJSON cfg = object
+        [ "startingVariable" .= cStartVariable cfg
+        , "ruleMap" .= M.toList (cRuleMap cfg)
+        , "screenDimension" .= cScreenDimension cfg
+        , "maxDepth" .= cMaxDepth cfg
+        ]
+
+instance FromJSON Config where
+    parseJSON = withObject "Config" $ \o -> do
+        sv <- o .: "startingVariable"
+        rs <- o .:? "ruleMap" .!= []
+        sd <- o .: "screenDimension"
+        md <- o .: "maxDepth"
+        return Config
+            { cStartVariable = sv
+            , cRuleMap = M.fromList rs
+            , cScreenDimension = sd
+            , cMaxDepth = md
+            }
 
 data EvalState = EvalState
     { eDepth :: Int
@@ -81,7 +94,13 @@ runEval cfg m = runWriter (runReaderT m cfg)
 logMsg :: String -> EvalMonad ()
 logMsg s = lift (tell [s])
 
--- Entry point
+runEvalRules :: Config -> [WindowId] -> [Float] -> (Placements, [WindowId])
+runEvalRules cfg wins params = case mLayoutFunc of
+    Nothing -> ([], wins)
+    Just f -> f wins params
+  where
+    mLayoutFunc = fst $ runEval cfg evalRules
+
 evalRules :: EvalMonad (Maybe WindowLayoutFunc)
 evalRules = do
     cfg <- ask

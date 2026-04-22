@@ -238,6 +238,25 @@ splitRatioTestEmpty = testCase "full [|, param] full, param list = []" $ do
     -- are clean here — the runtime warning isn't observable.
     assertEqual "no compile-time logs" [] logs
 
+-- splitRule :: TestTree
+-- splitRule = testCase "start = full [|] full" $ do
+--     let cfg = mkConfig "start = full [|] full" (v "start") screen 100
+--         (mLayout, logs) = compileConfig cfg
+--     layout <- case mLayout of
+--         Just f -> pure f
+--         Nothing -> assertFailure "evalRules returned Nothing"
+--     let (ps, left) = layout [0, 1] []
+--     assertEqual
+--         "2 windows: fallback to 50/50 split"
+--         [(0, Rect 0 0 400 600), (1, Rect 400 0 400 600)]
+--         ps
+--     assertEqual "no leftover" [] left
+--     -- `logs` comes from the compile step, before the layout runs. The
+--     -- warning we want is emitted during layout, which discards its logs
+--     -- (per the current design). So we can only check compile-time logs
+--     -- are clean here — the runtime warning isn't observable.
+--     assertEqual "no compile-time logs" [] logs
+
 layoutTests :: TestTree
 layoutTests =
     testGroup
@@ -257,6 +276,12 @@ splitRatioTests =
         , splitRatioTestRuntime
         , splitRatioTestEmpty
         ]
+
+-- parserTests :: TestTree
+-- parserTree =
+-- 	testGroup
+-- 		"Parser Tests"
+-- 		[]
 
 main :: IO ()
 main = defaultMain $ testGroup "Conductor" [layoutTests, splitRatioTests]
