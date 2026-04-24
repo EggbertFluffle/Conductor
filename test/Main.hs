@@ -273,18 +273,18 @@ layoutTest5 = testCase "5: param split + recursive horizontal divide (real-world
     let src =
             "start = full [|, param] stack\n\
             \stack = full (-) stack\n"
-        sd     = ScreenDimension 963 1158
-        cfg    = mkConfig src (v "start") sd 25
+        sd = ScreenDimension 963 1158
+        cfg = mkConfig src (v "start") sd 25
         layout = compile cfg
-        wins   = [726678688, 726686416, 726805840]
+        wins = [726678688, 726686416, 726805840]
         (ps, leftover) = layout wins []
 
     assertEqual "no leftover windows" [] leftover
     assertEqual
         "3 windows placed correctly"
-        [ (726678688, Rect   0   0  482 1158)
-        , (726686416, Rect 482   0  481  579)
-        , (726805840, Rect 482 579  481  579)
+        [ (726678688, Rect 0 0 482 1158)
+        , (726686416, Rect 482 0 481 579)
+        , (726805840, Rect 482 579 481 579)
         ]
         ps
 
@@ -318,7 +318,7 @@ leftMaster = testCase "Testing left master" $ do
     assertEqual "no leftover" [] left3
 
 rightMaster :: TestTree
-rightMaster = testCase "Testing left master" $ do
+rightMaster = testCase "Testing right master" $ do
     let cfg = mkConfig "start = full [|] ?stack\nstack = full (-) ?stack" (v "start") screen 100
         (mLayout, _) = compileConfig cfg
     layout <- case mLayout of
@@ -368,12 +368,12 @@ splitRatioTests =
         ]
 
 optionalTests :: TestTree
-optionalTests = 
-	testGroup
-		"Testing Optinals Behaviour"
-		[ leftMaster
-		, rightMaster
-		]
+optionalTests =
+    testGroup
+        "Testing Optinals Behaviour"
+        [ leftMaster
+        , rightMaster
+        ]
 
 main :: IO ()
 main = defaultMain $ testGroup "Conductor" [layoutTests, splitRatioTests, optionalTests]
