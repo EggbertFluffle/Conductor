@@ -257,6 +257,37 @@ splitRatioTestEmpty = testCase "full [|, param] full, param list = []" $ do
 --     -- are clean here — the runtime warning isn't observable.
 --     assertEqual "no compile-time logs" [] logs
 
+-- Test 5: the real-world JSON example
+--   snippet  : start = full [|, param] stack
+--              stack = full (-) stack
+--   screen   : 963 x 1158
+--   params   : []          (param keyword defaults to 0.5)
+--   windows  : [726678688, 726686416, 726805840]
+--
+-- Expected placements (verified against the CLI):
+--   726678688 -> Rect   0   0  482 1158  (left column, 50 % width)
+--   726686416 -> Rect 482   0  481  579  (top-right)
+--   726805840 -> Rect 482 579  481  579  (bottom-right)
+layoutTest5 :: TestTree
+layoutTest5 = testCase "5: param split + recursive horizontal divide (real-world)" $ do
+    let src =
+            "start = full [|, param] stack\n\
+            \stack = full (-) stack\n"
+        sd     = ScreenDimension 963 1158
+        cfg    = mkConfig src (v "start") sd 25
+        layout = compile cfg
+        wins   = [726678688, 726686416, 726805840]
+        (ps, leftover) = layout wins []
+
+    assertEqual "no leftover windows" [] leftover
+    assertEqual
+        "3 windows placed correctly"
+        [ (726678688, Rect   0   0  482 1158)
+        , (726686416, Rect 482   0  481  579)
+        , (726805840, Rect 482 579  481  579)
+        ]
+        ps
+
 layoutTests :: TestTree
 layoutTests =
     testGroup
@@ -266,6 +297,7 @@ layoutTests =
         , layoutTest2UnknownStart
         , layoutTest3
         , layoutTest4
+        , layoutTest5
         ]
 
 splitRatioTests :: TestTree

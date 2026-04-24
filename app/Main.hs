@@ -5,7 +5,7 @@ module Main (main) where
 
 import Conductor
 import Conductor.Parser
-import Data.Aeson (FromJSON(parseJSON), ToJSON(toJSON), eitherDecode, encode, (.:), (.=), object, withObject)
+import Data.Aeson (FromJSON(parseJSON), ToJSON(toJSON), eitherDecode, encode, (.:), (.:?), (.!=), (.=), object, withObject)
 import qualified Data.ByteString.Lazy.Char8 as BL
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
@@ -22,6 +22,7 @@ data InputJSON = InputJSON
     , maxDepth :: Int
     , screenSize :: ScreenDimension
     , windowIds :: [WindowId]
+    , params :: [Float]
     } deriving (Show, Generic)
 
 data ScreenSizeJSON = ScreenSizeJSON
@@ -37,17 +38,19 @@ instance FromJSON ScreenSizeJSON where
 
 instance FromJSON InputJSON where
     parseJSON = withObject "InputJSON" $ \o -> do
-        sv <- o .: "starting_variable"
-        sn <- o .: "snippet"
-        md <- o .: "max_depth"
-        ss <- o .: "screen_size"
-        wid <- o .: "window_ids"
+        sv  <- o .:  "starting_variable"
+        sn  <- o .:  "snippet"
+        md  <- o .:  "max_depth"
+        ss  <- o .:  "screen_size"
+        wid <- o .:  "window_ids"
+        ps  <- o .:? "params" .!= []
         return InputJSON
             { startingVariable = sv
-            , snippet = sn
-            , maxDepth = md
-            , screenSize = ScreenDimension (ssWidth ss) (ssHeight ss)
-            , windowIds = wid
+            , snippet          = sn
+            , maxDepth         = md
+            , screenSize       = ScreenDimension (ssWidth ss) (ssHeight ss)
+            , windowIds        = wid
+            , params           = ps
             }
 
 data PlacementJSON = PlacementJSON
@@ -112,7 +115,7 @@ main = do
                             , cScreenDimension = screenSize inp
                             , cMaxDepth = maxDepth inp
                             }
-                        (placed, ignoredWins) = runEvalRules cfg (windowIds inp) []
+                        (placed, ignoredWins) = runEvalRules cfg (windowIds inp) (params inp)
                         toPlacementJSON (wid, rect) = PlacementJSON
                             { pId = wid
                             , pTransform = RectJSON

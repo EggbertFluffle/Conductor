@@ -16,7 +16,7 @@ library
     import:           warnings
     exposed-modules:  Conductor, Conductor.Parser
     other-modules:
-    build-depends:    base ^>=4.18.3.0,
+    build-depends:    base >=4.18,
                       containers,
                       aeson,
                       mtl,
@@ -29,12 +29,22 @@ library
     hs-source-dirs:   src
     default-language: Haskell2010
 
+-- XMonad integration lives in src/Conductor/XMonad.hs.
+-- To wire it in, add a library stanza on a Linux box that has xmonad:
+--
+--   library conductor-xmonad
+--       exposed-modules:  Conductor.XMonad
+--       build-depends:    base >=4.18, conductor, aeson, bytestring,
+--                         containers, X11, xmonad
+--       hs-source-dirs:   src
+--       default-language: Haskell2010
+
 executable conductor
     import:           warnings
     default-language: Haskell2010
     main-is:          Main.hs
     hs-source-dirs:   app
-    build-depends:    base ^>=4.18.3.0,
+    build-depends:    base >=4.18,
                       aeson,
                       bytestring,
                       containers,
@@ -49,7 +59,7 @@ test-suite conductor-test
     hs-source-dirs:   test
     main-is:          Main.hs
     build-depends:
-        base ^>=4.18.3.0,
+        base >=4.18,
         containers,
         conductor,
         tasty,
