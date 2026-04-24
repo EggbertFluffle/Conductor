@@ -288,6 +288,64 @@ layoutTest5 = testCase "5: param split + recursive horizontal divide (real-world
         ]
         ps
 
+leftMaster :: TestTree
+leftMaster = testCase "Testing left master" $ do
+    let cfg = mkConfig "start = ?stack [|] full\nstack = full (-) ?stack" (v "start") screen 100
+        (mLayout, _) = compileConfig cfg
+    layout <- case mLayout of
+        Just f -> pure f
+        Nothing -> assertFailure "evalRules returned Nothing"
+
+    let (ps1, left1) = layout [0] []
+    assertEqual
+        "1 window: full screen"
+        [(0, Rect 0 0 800 600)]
+        ps1
+    assertEqual "no leftover" [] left1
+
+    let (ps2, left2) = layout [0, 1] []
+    assertEqual
+        "2 windows"
+        [(0, Rect 400 0 400 600), (1, Rect 0 0 400 600)]
+        ps2
+    assertEqual "no leftover" [] left2
+
+    let (ps3, left3) = layout [0, 1, 2] []
+    assertEqual
+        "3 windows"
+        [(0, Rect 400 0 400 600), (1, Rect 0 0 400 300), (2, Rect 0 300 400 300)]
+        ps3
+    assertEqual "no leftover" [] left3
+
+rightMaster :: TestTree
+rightMaster = testCase "Testing left master" $ do
+    let cfg = mkConfig "start = full [|] ?stack\nstack = full (-) ?stack" (v "start") screen 100
+        (mLayout, _) = compileConfig cfg
+    layout <- case mLayout of
+        Just f -> pure f
+        Nothing -> assertFailure "evalRules returned Nothing"
+
+    let (ps1, left1) = layout [0] []
+    assertEqual
+        "1 window: full screen"
+        [(0, Rect 0 0 800 600)]
+        ps1
+    assertEqual "no leftover" [] left1
+
+    let (ps2, left2) = layout [0, 1] []
+    assertEqual
+        "2 windows"
+        [(0, Rect 0 0 400 600), (1, Rect 400 0 400 600)]
+        ps2
+    assertEqual "no leftover" [] left2
+
+    let (ps3, left3) = layout [0, 1, 2] []
+    assertEqual
+        "3 windows"
+        [(0, Rect 0 0 400 600), (1, Rect 400 0 400 300), (2, Rect 400 300 400 300)]
+        ps3
+    assertEqual "no leftover" [] left3
+
 layoutTests :: TestTree
 layoutTests =
     testGroup
@@ -309,11 +367,13 @@ splitRatioTests =
         , splitRatioTestEmpty
         ]
 
--- parserTests :: TestTree
--- parserTree =
--- 	testGroup
--- 		"Parser Tests"
--- 		[]
+optionalTests :: TestTree
+optionalTests = 
+	testGroup
+		"Testing Optinals Behaviour"
+		[ leftMaster
+		, rightMaster
+		]
 
 main :: IO ()
-main = defaultMain $ testGroup "Conductor" [layoutTests, splitRatioTests]
+main = defaultMain $ testGroup "Conductor" [layoutTests, splitRatioTests, optionalTests]
