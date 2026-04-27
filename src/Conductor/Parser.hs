@@ -30,7 +30,7 @@ import Text.Megaparsec (
     some,
     try,
     (<|>),
-  )
+ )
 import Text.Megaparsec.Char (alphaNumChar, char, digitChar, hspace, newline, string)
 
 import GHC.Generics (Generic)
@@ -43,14 +43,14 @@ type Conductor = [Rule]
 
 -- <rule> ::= <variable> "=" <expr>
 data Rule = Rule {name :: Variable, r_expression :: Expression}
-    deriving (Show, Generic)
+    deriving (Show, Read, Generic)
 
 instance FromJSON Rule
 instance ToJSON Rule
 
 -- <variable> ::= <letter> [{<letter> | <digit>}]
 newtype Variable = Variable Text
-    deriving (Show, Eq, Ord, Generic)
+    deriving (Show, Read, Eq, Ord, Generic)
 
 instance FromJSON Variable
 instance ToJSON Variable
@@ -61,7 +61,7 @@ instance ToJSON Variable
 data Expression
     = ExprBinary (Maybe Opt) Operand Operator (Maybe Opt) Operand
     | ExprUnary Operand
-    deriving (Show, Generic)
+    deriving (Show, Read, Generic)
 
 instance FromJSON Expression
 instance ToJSON Expression
@@ -71,14 +71,14 @@ data Operand
     = OperandParen {o_expression :: Expression}
     | OperandLit {litteral :: Litteral}
     | OperandVar {variable :: Variable}
-    deriving (Show, Generic)
+    deriving (Show, Read, Generic)
 
 instance FromJSON Operand
 instance ToJSON Operand
 
 -- <literal> ::= "full" | "none"
 data Litteral = Full | None
-    deriving (Show, Generic)
+    deriving (Show, Read, Generic)
 
 instance FromJSON Litteral
 instance ToJSON Litteral
@@ -88,21 +88,21 @@ data Operator
     = Split {sDirection :: PartitionDirection, sParams :: Maybe Param}
     | Divide {dDirection :: PartitionDirection}
     | Layer LayerSpec
-    deriving (Show, Generic)
+    deriving (Show, Read, Generic)
 
 instance FromJSON Operator
 instance ToJSON Operator
 
 -- <part_dir> ::= "-" | "|"
 data PartitionDirection = Horizontal | Vertical
-    deriving (Show, Generic)
+    deriving (Show, Read, Generic)
 
 instance FromJSON PartitionDirection
 instance ToJSON PartitionDirection
 
 -- <layer_dir> ::= "<" | "^" | ">" | "v"
 data LayerDir = LayerLeft | LayerUp | LayerRight | LayerDown
-    deriving (Show, Generic)
+    deriving (Show, Read, Generic)
 
 instance FromJSON LayerDir
 instance ToJSON LayerDir
@@ -111,21 +111,21 @@ instance ToJSON LayerDir
 data LayerSpec
     = LayerDirection {layerDirection :: LayerDir}
     | LayerParams {layX :: Param, layY :: Param}
-    deriving (Show, Generic)
+    deriving (Show, Read, Generic)
 
 instance FromJSON LayerSpec
 instance ToJSON LayerSpec
 
 -- <param> ::= "param" | <float>
 data Param = ParamKeyword | ParamFloat Float
-    deriving (Show, Generic)
+    deriving (Show, Read, Generic)
 
 instance FromJSON Param
 instance ToJSON Param
 
 -- <opt> ::= "?"
 data Opt = Opt
-    deriving (Show, Generic)
+    deriving (Show, Read, Generic)
 
 instance FromJSON Opt
 instance ToJSON Opt
@@ -140,7 +140,7 @@ parseRule = do
     _ <- char '='
     hspace
     expr <- parseExpression
-    _ <- (semicolonEnd <|> newlineEnd)
+    _ <- semicolonEnd <|> newlineEnd
     return $ Rule var expr
   where
     semicolonEnd = do
