@@ -22,7 +22,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import GHC.Generics (Generic)
 
-type WindowId = Int
+type WindowId = String
 
 data ScreenDimension = ScreenDimension
     { sdWidth :: Int

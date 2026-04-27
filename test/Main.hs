@@ -62,19 +62,19 @@ layoutTest1 = testCase "1: full [|] none" $ do
     assertEqual "0 windows: no placements" [] ps0
     assertEqual "0 windows: no leftover" [] left0
 
-    let (ps1, left1) = layout [0] []
+    let (ps1, left1) = layout ["0"] []
     assertEqual
         "1 window: takes full screen (right collapses)"
-        [(0, Rect 0 0 800 600)]
+        [("0", Rect 0 0 800 600)]
         ps1
     assertEqual "1 window: no leftover" [] left1
 
-    let (ps2, left2) = layout [0, 1] []
+    let (ps2, left2) = layout ["0", "1"] []
     assertEqual
         "2 windows: first takes full screen"
-        [(0, Rect 0 0 800 600)]
+        [("0", Rect 0 0 800 600)]
         ps2
-    assertEqual "2 windows: second is leftover" [1] left2
+    assertEqual "2 windows: second is leftover" ["1"] left2
 
 -- Test 2: end = none [-] full (start = "end")
 -- `full` has demand 1, so right-? does not collapse (unlike test 1).
@@ -87,19 +87,19 @@ layoutTest2 = testCase "2: none [-] full (start=end)" $ do
     let (ps0, _) = layout [] []
     assertEqual "0 windows: collapse to none, nothing placed" [] ps0
 
-    let (ps1, left1) = layout [0] []
+    let (ps1, left1) = layout ["0"] []
     assertEqual
         "1 window: lands in bottom half"
-        [(0, Rect 0 300 800 300)]
+        [("0", Rect 0 300 800 300)]
         ps1
     assertEqual "1 window: no leftover" [] left1
 
-    let (ps2, left2) = layout [0, 1] []
+    let (ps2, left2) = layout ["0", "1"] []
     assertEqual
         "2 windows: still only one bottom slot"
-        [(0, Rect 0 300 800 300)]
+        [("0", Rect 0 300 800 300)]
         ps2
-    assertEqual "2 windows: second is leftover" [1] left2
+    assertEqual "2 windows: second is leftover" ["1"] left2
 
 {- | Companion to test 2: start variable not in the rule map should
   make evalRules return Nothing and log a message.
@@ -122,26 +122,26 @@ layoutTest3 = testCase "3: (full [|] full) [-] none" $ do
     let (ps0, _) = layout [] []
     assertEqual "0 windows: nothing placed" [] ps0
 
-    let (ps1, left1) = layout [0] []
+    let (ps1, left1) = layout ["0"] []
     assertEqual
         "1 window: inner right collapses, left full gets everything"
-        [(0, Rect 0 0 800 600)]
+        [("0", Rect 0 0 800 600)]
         ps1
     assertEqual "1 window: no leftover" [] left1
 
-    let (ps2, left2) = layout [0, 1] []
+    let (ps2, left2) = layout ["0", "1"] []
     assertEqual
         "2 windows: inner vertical split"
-        [(0, Rect 0 0 400 600), (1, Rect 400 0 400 600)]
+        [("0", Rect 0 0 400 600), ("1", Rect 400 0 400 600)]
         ps2
     assertEqual "2 windows: no leftover" [] left2
 
-    let (ps3, left3) = layout [0, 1, 2] []
+    let (ps3, left3) = layout ["0", "1", "2"] []
     assertEqual
         "3 windows: only 2 placed"
-        [(0, Rect 0 0 400 600), (1, Rect 400 0 400 600)]
+        [("0", Rect 0 0 400 600), ("1", Rect 400 0 400 600)]
         ps3
-    assertEqual "3 windows: third is leftover" [2] left3
+    assertEqual "3 windows: third is leftover" ["2"] left3
 
 -- Test 4: master/stack
 --   start = full [|] ?stack
@@ -157,37 +157,37 @@ layoutTest4 = testCase "4: master/stack recursion" $ do
     let (ps0, _) = layout [] []
     assertEqual "0 windows: nothing placed" [] ps0
 
-    let (ps1, left1) = layout [0] []
+    let (ps1, left1) = layout ["0"] []
     assertEqual
         "1 window: ?stack collapses, full takes screen"
-        [(0, Rect 0 0 800 600)]
+        [("0", Rect 0 0 800 600)]
         ps1
     assertEqual "1 window: no leftover" [] left1
 
-    let (ps2, left2) = layout [0, 1] []
+    let (ps2, left2) = layout ["0", "1"] []
     assertEqual
         "2 windows: master on left half, one on right half"
-        [(0, Rect 0 0 400 600), (1, Rect 400 0 400 600)]
+        [("0", Rect 0 0 400 600), ("1", Rect 400 0 400 600)]
         ps2
     assertEqual "2 windows: no leftover" [] left2
 
-    let (ps3, left3) = layout [0, 1, 2] []
+    let (ps3, left3) = layout ["0", "1", "2"] []
     assertEqual
         "3 windows: master + two stacked horizontally"
-        [ (0, Rect 0 0 400 600)
-        , (1, Rect 400 0 400 300)
-        , (2, Rect 400 300 400 300)
+        [ ("0", Rect 0 0 400 600)
+        , ("1", Rect 400 0 400 300)
+        , ("2", Rect 400 300 400 300)
         ]
         ps3
     assertEqual "3 windows: no leftover" [] left3
 
-    let (ps4, left4) = layout [0, 1, 2, 3] []
+    let (ps4, left4) = layout ["0", "1", "2", "3"] []
     assertEqual
         "4 windows: master + three evenly stacked"
-        [ (0, Rect 0 0 400 600)
-        , (1, Rect 400 0 400 200)
-        , (2, Rect 400 200 400 200)
-        , (3, Rect 400 400 400 200)
+        [ ("0", Rect 0 0 400 600)
+        , ("1", Rect 400 0 400 200)
+        , ("2", Rect 400 200 400 200)
+        , ("3", Rect 400 400 400 200)
         ]
         ps4
     assertEqual "4 windows: no leftover" [] left4
@@ -197,10 +197,10 @@ splitRatioTestLiteral :: TestTree
 splitRatioTestLiteral = testCase "full [|, 0.3] full" $ do
     let cfg = mkConfig "start = full [|, 0.3] full\n" (v "start") screen 100
         layout = compile cfg
-        (ps, left) = layout [0, 1] []
+        (ps, left) = layout ["0", "1"] []
     assertEqual
         "2 windows: 30/70 vertical split"
-        [(0, Rect 0 0 240 600), (1, Rect 240 0 560 600)]
+        [("0", Rect 0 0 240 600), ("1", Rect 240 0 560 600)]
         ps
     assertEqual "no leftover" [] left
 
@@ -209,10 +209,10 @@ splitRatioTestRuntime :: TestTree
 splitRatioTestRuntime = testCase "full [|, param] full, param list = [0.5]" $ do
     let cfg = mkConfig "start = full [|, param] full\n" (v "start") screen 100
         layout = compile cfg
-        (ps, left) = layout [0, 1] [0.25]
+        (ps, left) = layout ["0", "1"] [0.25]
     assertEqual
         "2 windows: 25/75 vertical split from param list"
-        [(0, Rect 0 0 200 600), (1, Rect 200 0 600 600)]
+        [("0", Rect 0 0 200 600), ("1", Rect 200 0 600 600)]
         ps
     assertEqual "no leftover" [] left
 
@@ -226,10 +226,10 @@ splitRatioTestEmpty = testCase "full [|, param] full, param list = []" $ do
     layout <- case mLayout of
         Just f -> pure f
         Nothing -> assertFailure "evalRules returned Nothing"
-    let (ps, left) = layout [0, 1] []
+    let (ps, left) = layout ["0", "1"] []
     assertEqual
         "2 windows: fallback to 50/50 split"
-        [(0, Rect 0 0 400 600), (1, Rect 400 0 400 600)]
+        [("0", Rect 0 0 400 600), ("1", Rect 400 0 400 600)]
         ps
     assertEqual "no leftover" [] left
     -- `logs` comes from the compile step, before the layout runs. The
@@ -245,10 +245,10 @@ splitRatioTestEmpty = testCase "full [|, param] full, param list = []" $ do
 --     layout <- case mLayout of
 --         Just f -> pure f
 --         Nothing -> assertFailure "evalRules returned Nothing"
---     let (ps, left) = layout [0, 1] []
+--     let (ps, left) = layout ["0", "1"] []
 --     assertEqual
 --         "2 windows: fallback to 50/50 split"
---         [(0, Rect 0 0 400 600), (1, Rect 400 0 400 600)]
+--         [("0", Rect 0 0 400 600), ("1", Rect 400 0 400 600)]
 --         ps
 --     assertEqual "no leftover" [] left
 --     -- `logs` comes from the compile step, before the layout runs. The
@@ -276,15 +276,15 @@ layoutTest5 = testCase "5: param split + recursive horizontal divide (real-world
         sd = ScreenDimension 963 1158
         cfg = mkConfig src (v "start") sd 25
         layout = compile cfg
-        wins = [726678688, 726686416, 726805840]
+        wins = ["726678688", "726686416", "726805840"]
         (ps, leftover) = layout wins []
 
     assertEqual "no leftover windows" [] leftover
     assertEqual
         "3 windows placed correctly"
-        [ (726678688, Rect 0 0 482 1158)
-        , (726686416, Rect 482 0 481 579)
-        , (726805840, Rect 482 579 481 579)
+        [ ("726678688", Rect 0 0 482 1158)
+        , ("726686416", Rect 482 0 481 579)
+        , ("726805840", Rect 482 579 481 579)
         ]
         ps
 
@@ -296,24 +296,24 @@ leftMaster = testCase "Testing left master" $ do
         Just f -> pure f
         Nothing -> assertFailure "evalRules returned Nothing"
 
-    let (ps1, left1) = layout [0] []
+    let (ps1, left1) = layout ["0"] []
     assertEqual
         "1 window: full screen"
-        [(0, Rect 0 0 800 600)]
+        [("0", Rect 0 0 800 600)]
         ps1
     assertEqual "no leftover" [] left1
 
-    let (ps2, left2) = layout [0, 1] []
+    let (ps2, left2) = layout ["0", "1"] []
     assertEqual
         "2 windows"
-        [(0, Rect 400 0 400 600), (1, Rect 0 0 400 600)]
+        [("0", Rect 400 0 400 600), ("1", Rect 0 0 400 600)]
         ps2
     assertEqual "no leftover" [] left2
 
-    let (ps3, left3) = layout [0, 1, 2] []
+    let (ps3, left3) = layout ["0", "1", "2"] []
     assertEqual
         "3 windows"
-        [(0, Rect 400 0 400 600), (1, Rect 0 0 400 300), (2, Rect 0 300 400 300)]
+        [("0", Rect 400 0 400 600), ("1", Rect 0 0 400 300), ("2", Rect 0 300 400 300)]
         ps3
     assertEqual "no leftover" [] left3
 
@@ -325,24 +325,24 @@ rightMaster = testCase "Testing right master" $ do
         Just f -> pure f
         Nothing -> assertFailure "evalRules returned Nothing"
 
-    let (ps1, left1) = layout [0] []
+    let (ps1, left1) = layout ["0"] []
     assertEqual
         "1 window: full screen"
-        [(0, Rect 0 0 800 600)]
+        [("0", Rect 0 0 800 600)]
         ps1
     assertEqual "no leftover" [] left1
 
-    let (ps2, left2) = layout [0, 1] []
+    let (ps2, left2) = layout ["0", "1"] []
     assertEqual
         "2 windows"
-        [(0, Rect 0 0 400 600), (1, Rect 400 0 400 600)]
+        [("0", Rect 0 0 400 600), ("1", Rect 400 0 400 600)]
         ps2
     assertEqual "no leftover" [] left2
 
-    let (ps3, left3) = layout [0, 1, 2] []
+    let (ps3, left3) = layout ["0", "1", "2"] []
     assertEqual
         "3 windows"
-        [(0, Rect 0 0 400 600), (1, Rect 400 0 400 300), (2, Rect 400 300 400 300)]
+        [("0", Rect 0 0 400 600), ("1", Rect 400 0 400 300), ("2", Rect 400 300 400 300)]
         ps3
     assertEqual "no leftover" [] left3
 
