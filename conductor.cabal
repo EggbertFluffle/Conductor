@@ -7,7 +7,6 @@ author:             Harrison DiAmbrosio, Parker Lavering, Po-Yeh Chen
 maintainer:         hdiambrosio@gmail.com
 category:           Graphics
 build-type:         Simple
-extra-doc-files:    CHANGELOG.md
 
 common warnings
     ghc-options: -Wall
