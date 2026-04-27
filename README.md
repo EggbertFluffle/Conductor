@@ -4,7 +4,8 @@ Conductor is a DSL designed to unify how we describe dynamic window management. 
 
 ## Supported platforms
 
-- [Mezzaluna](https://github.com/MezzalunaWM/Mezzaluna)
+- [Mezzaluna](https://github.com/MezzalunaWM/Mezzaluna) -> [conductor.mez](https://github.com/EggbertFluffle/conductor.dwl)
+- [dwl](https://codeberg.org/dwl/dwl) -> [conductor.dwl](https://github.com/EggbertFluffle/conductor.dwl)
 
 ## Installation
 
