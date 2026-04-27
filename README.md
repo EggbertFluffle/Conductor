@@ -71,3 +71,8 @@ This should be passed to conductor via `stdin`, after which the binary will pars
     ]
 }
 ```
+
+## Benevolent Dictators for Life
+- Harrison DiAmbrosio <hdiambrosio@gmail.com>
+- Parker Lavering <plavering@live.com>
+- Po-Yeh Chen <snlk374@gmail.com>
