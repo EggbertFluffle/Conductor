@@ -4,8 +4,8 @@ Conductor is a DSL designed to unify how we describe dynamic window management. 
 
 ## Supported platforms
 
-- [Mezzaluna](https://github.com/MezzalunaWM/Mezzaluna) -> [conductor.mez](https://github.com/EggbertFluffle/conductor.dwl)
-- [dwl](https://codeberg.org/dwl/dwl) -> [conductor.dwl](https://github.com/EggbertFluffle/conductor.dwl)
+- [Mezzaluna](https://github.com/MezzalunaWM/Mezzaluna) > [conductor.mez](https://github.com/EggbertFluffle/conductor.dwl)
+- [dwl](https://codeberg.org/dwl/dwl) > [conductor.dwl](https://github.com/EggbertFluffle/conductor.dwl)
 
 ## Installation
 
@@ -71,6 +71,10 @@ This should be passed to conductor via `stdin`, after which the binary will pars
     ]
 }
 ```
+
+## Demonstration
+
+[![Conductor: A Window Management DSL (demo)](https://img.youtube.com/vi/-vIGqjxxmfo/0.jpg)](https://youtu.be/-vIGqjxxmfo)
 
 ## Benevolent Dictators for Life
 - Harrison DiAmbrosio <hdiambrosio@gmail.com>
