@@ -2,8 +2,6 @@
 
 Conductor is a DSL designed to unify how we describe dynamic window management. It is intended to be platform agnostic meaning that, as long as a desktop platform implements and interface to Conductor, one snippet of Conductor could work in any Wayland compositor just as it would on any X11 window manager.
 
-[![Conductor: A Window Management DSL (demo)](https://img.youtube.com/vi/-vIGqjxxmfo/0.jpg)](https://youtu.be/-vIGqjxxmfo)
-
 ## Supported platforms
 
 - [Mezzaluna](https://github.com/MezzalunaWM/Mezzaluna) > [conductor.mez](https://github.com/EggbertFluffle/conductor.dwl)
@@ -73,6 +71,10 @@ This should be passed to conductor via `stdin`, after which the binary will pars
     ]
 }
 ```
+
+## Demonstration
+
+[![Conductor: A Window Management DSL (demo)](https://img.youtube.com/vi/-vIGqjxxmfo/0.jpg)](https://youtu.be/-vIGqjxxmfo)
 
 ## Benevolent Dictators for Life
 - Harrison DiAmbrosio <hdiambrosio@gmail.com>
