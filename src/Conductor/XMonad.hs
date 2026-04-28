@@ -19,7 +19,6 @@ import XMonad (LayoutClass (..), Window, X)
 import qualified XMonad.StackSet as W
 
 -- JSON config loaded from file. screen_size and window_ids are supplied
--- at runtime by XMonad, so they are omitted here.
 data XMonadConfig = XMonadConfig
     { xcStartVariable :: Variable
     -- ^ Entry-point rule name (e.g. "start")
@@ -40,9 +39,6 @@ instance FromJSON XMonadConfig where
             , xcMaxDepth      = md
             }
 
--- XMonad layout wrapper that holds the parsed conductor config.
--- The screen dimension in Config is updated each layout call from
--- the Rectangle XMonad provides, so it stays in sync with the WM.
 data ConductorLayout a = ConductorLayout
     { clRules    :: [Rule]
     -- ^ Parsed rules from the conductor config
@@ -78,7 +74,7 @@ conductorLayoutFromFile path = do
         Left  err -> ioError (userError $ "Conductor: bad JSON config: " ++ err)
         Right cl  -> return cl
 
--- | Parse a layout from a lazy ByteString (the JSON shown above).
+-- | layout from a lazy ByteString (the JSON shown above).
 conductorLayoutFromJSON :: BL.ByteString -> Either String (ConductorLayout a)
 conductorLayoutFromJSON bs = case eitherDecode bs of
     Left  err -> Left err
@@ -100,7 +96,7 @@ instance LayoutClass ConductorLayout Window where
 
     description _ = "Conductor"
 
--- Pure layout computation. Rebuilds Config on every call so the screen
+-- Pure layout computation rebuilds cfg on every call so the screen
 -- rect stays current.
 runLayout' :: ConductorLayout Window -> Rectangle -> [Window] -> [(Window, Rectangle)]
 runLayout' cl xRect wins =
@@ -112,14 +108,13 @@ runLayout' cl xRect wins =
             , cScreenDimension = dim
             , cMaxDepth       = clMaxDepth cl
             }
-        wids            = map (fromIntegral . fromEnum) wins
+        wids            = map fromIntegral wins
         (placed, _)     = runEvalRules cfg wids []
-        converted       = [(toEnum wid, rectFromRect r) | (wid, r) <- placed]
+        ox              = fromIntegral (rect_x xRect)
+        oy              = fromIntegral (rect_y xRect)
+        converted       = [(fromIntegral wid, rectFromRect ox oy r) | (wid, r) <- placed]
     -- fall back to vertical stack if the evaluator produced no placements
     in if null converted then fallbackLayout xRect wins else converted
-
-
--- Type conversions
 
 -- | XMonad Rectangle → ScreenDimension
 rectToScreenDim :: Rectangle -> ScreenDimension
@@ -129,20 +124,19 @@ rectToScreenDim r =
         , sdHeight = fromIntegral (rect_height r)
         }
 
--- | Our Rect → XMonad Rectangle
--- XMonad Rectangle origin is absolute on screen; our Rect origin is
--- relative to the workspace rect, so we pass it through as-is
--- (the caller is responsible for adding the workspace offset if needed).
-rectFromRect :: Rect -> Rectangle
-rectFromRect (Rect x y w h) =
+-- |XMonad Rectangle
+-- conductor computes positions relative to (0,0); add the workspace
+-- origin so the result is in absolute screen coordinates.
+rectFromRect :: Int -> Int -> Rect -> Rectangle
+rectFromRect ox oy (Rect x y w h) =
     Rectangle
-        { rect_x      = fromIntegral x
-        , rect_y      = fromIntegral y
+        { rect_x      = fromIntegral (x + ox)
+        , rect_y      = fromIntegral (y + oy)
         , rect_width  = fromIntegral w
         , rect_height = fromIntegral h
         }
 
--- | Vertical stack fallback used when conductor eval fails.
+-- | vertical stack fallback used when conductor eval fails.
 fallbackLayout :: Rectangle -> [Window] -> [(Window, Rectangle)]
 fallbackLayout _ [] = []
 fallbackLayout rect wins =
