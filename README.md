@@ -2,9 +2,7 @@
 
 Conductor is a DSL designed to unify how we describe dynamic window management. It is intended to be platform agnostic meaning that, as long as a desktop platform implements and interface to Conductor, one snippet of Conductor could work in any Wayland compositor just as it would on any X11 window manager.
 
-<p align="center">
-    <iframe width="560" height="315" src="https://www.youtube.com/embed/-vIGqjxxmfo?si=osOyHTom4-Lkeung" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-</p>
+[![Conductor: A Window Management DSL (demo)](https://img.youtube.com/vi/-vIGqjxxmfo/0.jpg)](https://youtu.be/-vIGqjxxmfo)
 
 ## Supported platforms
 
